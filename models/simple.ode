@@ -1,0 +1,3 @@
+-- init x 1.                       -- Uncomment to set inital value (Task C)
+model
+x' = 0. - x

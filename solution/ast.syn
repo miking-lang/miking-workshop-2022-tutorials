@@ -1,0 +1,103 @@
+language Calc
+
+start File
+
+type File
+
+type Expr {
+  grouping = "(" ")",
+}
+
+prod Num: Expr = val:Float
+prod left Add: Expr = left:Expr "+" right:Expr
+prod left Sub: Expr = left:Expr "-" right:Expr
+prod left Mul: Expr = left:Expr "*" right:Expr
+prod left Div: Expr = left:Expr "/" right:Expr
+prod Pow: Expr = left:Expr "^" right:Expr
+prod Sin: Expr = "sin" arg:Expr
+
+-- We use do not use VarExpr here to avoid shadowing the definition in lib/lambda.mc
+prod FreeVar: Expr = name:LIdent
+
+prod Let: Expr = "let" name:LIdent "=" arg:Expr "in" body:Expr
+
+
+type Equality
+
+prod Equality: Equality = name:LIdent"'" "=" rhs:Expr
+
+
+type InitalVal
+
+prod InitalVal: InitalVal = "init" name:LIdent val:Float
+
+
+prod File: File = ivs:InitalVal* "model" eqs:Equality (";" eqs:Equality)*
+
+
+precedence {
+  Mul Div;
+  Add Sub;
+}
+
+-------------------------------------------------------------------
+
+-- Tokens. These will not be covered in the tutorial, but if you're
+-- curious the language fragments defining each of these tokens
+-- can be found here:
+-- https://github.com/miking-lang/miking/blob/develop/stdlib/parser/lexer.mc
+
+include "lib/prime-lexer.mc"
+
+-- Basic tokens
+token String {
+  repr = StringRepr {},
+  constructor = StringTok,
+  fragment = StringTokenParser,
+}
+token UInt {
+  repr = UIntRepr {},
+  constructor = UIntTok,
+  fragment = UIntTokenParser,
+}
+token Float {
+  repr = FloatRepr {},
+  constructor = FloatTok,
+  fragment = UFloatTokenParser,
+}
+token LIdent {
+  repr = LIdentRepr {},
+  constructor = LIdentTok,
+  fragment = LIdentTokenParser,
+  ty = String,
+}
+token UIdent {
+  repr = UIdentRepr {},
+  constructor = UIdentTok,
+  fragment = UIdentTokenParser,
+  ty = String,
+}
+
+-- Wrapping tokens that just change the type in the AST
+token UName {
+  base = UIdent,
+  wrap = nameNoSym,
+  ty = Name,
+}
+token LName {
+  base = LIdent,
+  wrap = nameNoSym,
+  ty = Name,
+}
+
+-- Token types only used through literals
+token {fragment = OperatorTokenParser,}
+token {fragment = CommaTokenParser,}
+token {fragment = SemiTokenParser,}
+token {fragment = BracketTokenParser,}
+token {fragment = PrimeTokenParser,}
+
+-- Whitespace and comments
+token {fragment = LineCommentParser,}
+token {fragment = MultilineCommentParser,}
+token {fragment = WhitespaceParser,}
