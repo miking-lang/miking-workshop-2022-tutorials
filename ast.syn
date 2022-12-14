@@ -1,0 +1,64 @@
+language Calc
+
+start File
+
+type File
+
+type Expr {
+  grouping = "(" ")",
+}
+
+prod File: File = e:Expr
+
+prod Num: Expr = val:Float
+
+
+-------------------------------------------------------------------
+
+-- Tokens. These will not be covered in the tutorial, but if you're
+-- curious the language fragments defining each of these tokens
+-- can be found here:
+-- https://github.com/miking-lang/miking/blob/develop/stdlib/parser/lexer.mc
+
+include "lib/prime-lexer.mc"
+
+-- Basic tokens
+token String {
+  repr = StringRepr {},
+  constructor = StringTok,
+  fragment = StringTokenParser,
+}
+token Integer {
+  repr = UIntRepr {},
+  constructor = UIntTok,
+  fragment = UIntTokenParser,
+}
+token Float {
+  repr = FloatRepr {},
+  constructor = FloatTok,
+  fragment = UFloatTokenParser,
+}
+token LIdent {
+  repr = LIdentRepr {},
+  constructor = LIdentTok,
+  fragment = LIdentTokenParser,
+  ty = String,
+}
+token UIdent {
+  repr = UIdentRepr {},
+  constructor = UIdentTok,
+  fragment = UIdentTokenParser,
+  ty = String,
+}
+
+-- Token types only used through literals
+token {fragment = OperatorTokenParser,}
+token {fragment = CommaTokenParser,}
+token {fragment = SemiTokenParser,}
+token {fragment = BracketTokenParser,}
+token {fragment = PrimeTokenParser,}
+
+-- Whitespace and comments
+token {fragment = LineCommentParser,}
+token {fragment = MultilineCommentParser,}
+token {fragment = WhitespaceParser,}

@@ -1,0 +1,8 @@
+-- Task C model with initial values
+-- This ODE model is called Lotka-Volterra equations, or the predator-prey
+-- equations. It models the population of preys and predators over time.
+-- init x 10.                      -- The number or preys (e.g. rabbits)
+-- init y 1.                       -- The number of predators (e.g. foxes)
+model
+x' = 1.1 * x - 0.1 * x * y;
+y' = 0.1 * x * y - 1.4 * y

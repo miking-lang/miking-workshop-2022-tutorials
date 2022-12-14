@@ -1,0 +1,8 @@
+-- init x 1.                       -- Uncomment to set inital value (Task C)
+model
+-- Here we encode the independent variable as a dependent variable t
+t' = 1.;
+-- We re-write a second order ODE to first order by introducing a new dependent
+-- variable for the for the first derivative.
+x' = dx;
+dx' = 0. - (dx + x) + sin(t)

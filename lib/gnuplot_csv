@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+tmp_file_name_template="/tmp/plot-data.XXXXXX"
+
+mk_gnuplot_config() {
+  declare file="$1" n="$2"
+  local line_width
+
+  line_width=2
+
+  echo "set datafile separator comma; set key outside autotitle columnhead; plot for [col=1:$n] \"$file\" using 0:col with lines lw $line_width"
+}
+
+parse_file_input() {
+  local file
+  if [ "$#" -eq 0 ] || ( [ "$#" -eq 1 ] && [ "$*" = "-" ] ); then
+    file=$(mktemp "$tmp_file_name_template")
+    cat - > "$file"
+  elif [ "$#" -ge 1 ]; then
+    file="$@"
+  fi
+  echo "$file"
+}
+
+do_plotting() {
+  declare file="$1"
+  local header
+  local n
+
+  header=$(head -n 1 "$file")
+  n=$(echo "$header" | awk -F',' '{print NF}')
+  config=$(mk_gnuplot_config "$file" "$n")
+  gnuplot -p -e "$config"
+}
+
+if ! hash gnuplot 2> /dev/null; then
+  printf 'gnuplot is not present in $PATH (it is availible here: http://www.gnuplot.info/download.html)\n'
+  exit 1
+fi
+
+file=$(parse_file_input "$@")
+if [ -f "$file" ]; then
+    do_plotting "$file" "$labels"
+else
+    printf "%s is not a file\n" "$f"
+    exit 1
+fi
+exit 0
