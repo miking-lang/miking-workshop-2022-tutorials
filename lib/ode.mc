@@ -57,6 +57,54 @@ let _htmlTemplatePost = strJoin "\n"
   , "</script>"
   ]
 
+-- ** CALLBACK FUNCTION ARG
+type ODEFnArg = {
+  t : Float,                    -- free variable t
+  xs : [Float],                 -- states x(t) ∈ ℝ^nx
+  us : [Float],                 -- inputs u(t) ∈ ℝ^nu
+  ps : [Float]                  -- parameters p ∈ ℝ^np
+}
+
+-- ** INTEGRATION STEP FUNCTION
+-- Fourth order explicit Runge Kutta (RK4) ODEs integration step.
+-- `f`    : function that computes x'(t) ∈ ℝ^nx
+-- `xidxs` : index vector of size nx
+-- `h`    : step-size of the integration
+-- `t`    : value of t
+-- `xs`   : values of the states x(t) ∈ ℝ^nx
+-- `us`   : inputs u ∈ ℝ^nu
+-- `ps`   : parameters p ∈ ℝ^np
+let odeSolverRK4Step :
+  (ODEFnArg -> [Float])
+  -> [Int]
+  -> Float
+  -> Float
+  -> [Float]
+  -> [Float]
+  -> [Float]
+  -> [Float] =
+  lam f. lam xidxs. lam h. lam t. lam xs. lam us. lam ps.
+    let h2 = divf h 2. in
+    let t2 = addf t h2 in
+    let th = addf t h in
+    let k1s = f { t = t, xs = xs, us = us, ps = ps } in
+    let tmps = map2 (lam x. lam k. addf x (mulf h2 k)) xs k1s in
+    let k2s = f { t = t2, xs = tmps, us = us, ps = ps} in
+    let tmps = map2 (lam x. lam k. addf x (mulf h2 k)) xs k2s in
+    let k3s = f { t = t2, xs = tmps, us = us, ps = ps } in
+    let tmps = map2 (lam x. lam k. addf x (mulf h k)) xs k3s in
+    let k4s = f { t = th, xs = tmps, us = us, ps = ps } in
+    map
+      (lam i.
+        let k1 = get k1s i in
+        let k2 = mulf 2. (get k2s i) in
+        let k3 = mulf 2. (get k3s i) in
+        let k4 = get k4s i in
+        let x = get xs i in
+          addf x (mulf h (divf (addf k1 (addf k2 (addf k3 k4))) 6.)))
+      xidxs
+
+
 lang ODEHelpersImpl
   syn Expr =
 
@@ -82,6 +130,10 @@ lang ODEHelpersImpl
       let lhs = map (lam rh. exprToFloat (rh state)) rhs in
       iteri (lam i. lam v. tensorLinearSetExn dy i v) lhs
 
+  syn Method =
+  | RK4 {}
+  | BDF {}
+
   /-
      `ivpSolve eqn interval initialValues` takes an ODE, an interval, and inital
      values, and produces a solution trace.
@@ -102,8 +154,18 @@ lang ODEHelpersImpl
   : EquationsImpl ->
     Float ->
     Map String Float ->
+    Method ->
     Either String [Map String Float]
-  sem ivpSolve eqs interval =
+  sem ivpSolve eqs interval initialValues =
+  | RK4 _ -> ivpSolveRK4 eqs interval initialValues
+  | BDF _ -> ivpSolveCVODE eqs interval initialValues
+
+  sem ivpSolveCVODE
+  : EquationsImpl ->
+    Float ->
+    Map String Float ->
+    Either String [Map String Float]
+  sem ivpSolveCVODE eqs interval =
   | initialState ->
     match unzip (mapBindings eqs) with (vars, rhs) in
     let rhs = _wrapRHS vars rhs in
@@ -188,6 +250,57 @@ lang ODEHelpersImpl
       end
     in recur [] t0
 
+  sem ivpSolveRK4
+  : EquationsImpl ->
+    Float ->
+    Map String Float ->
+    Either String [Map String Float]
+  sem ivpSolveRK4 eqs interval =
+  | initialState ->
+    match unzip (mapBindings eqs) with (vars, rhs) in
+    let f = lam arg.
+      let state =
+        mapFromSeq cmpString
+          (zipWith (lam var. lam val. (var, floatToExpr val)) vars arg.xs)
+      in
+      map (lam rh. exprToFloat (rh state)) rhs
+    in
+    let xidxs = create (length vars) (lam i. i) in
+    let h = 0.1 in
+    let xs =
+      map
+        (lam var.
+          let v = optionGetOrElse
+            (lam.
+              printErrorLn
+                (warnMsg
+                  (join ["Unspecified initial value, setting ", var, "=0. (Don't worry about this until Task C)"]));
+              0.)
+            (mapLookup var initialState)
+          in
+          v)
+        vars
+    in
+    let ts =
+      unfoldr
+        (lam t. if geqf t interval then None {} else Some (t, addf t h)) 0.
+    in
+    let xss =
+      foldl
+        (lam xss. lam t.
+          let xs = head xss in
+          let nextxs = odeSolverRK4Step f xidxs h t xs [] [] in
+          cons nextxs xss)
+        [xs]
+        ts
+    in
+    let sol = map
+      (lam xs.
+        mapFromSeq cmpString (zipWith (lam var. lam val. (var, val)) vars xs))
+      xss
+    in
+    Right (reverse sol)
+
 
   /-
      `odeWriteSolution sol` prints the solution `sol` to stdout as comma seprated
@@ -264,7 +377,6 @@ let odeUsage = strJoin "\n" [
 "an inital value VAL to the dependent variable NAME"
 ]
 
-
 mexpr
 
 use TestODEHelpersImpl in
@@ -338,12 +450,12 @@ in
 
 let initialState = mapFromSeq cmpString [("x", 1.), ("dx", 0.)] in
 utest
-  match ivpSolve harmonicOscillator 10. initialState with Right _ then true
+  match ivpSolveCVODE harmonicOscillator 10. initialState with Right _ then true
   else false
 with true in
 
 -- -- Solves and prints solution
--- (switch ivpSolve harmonicOscillator 10. initialState
+-- (switch ivpSolveCVODE harmonicOscillator 10. initialState
 --   case Right sol then odeWriteSolution filename sol
 --   case Left msg then printLn msg
 -- end);
