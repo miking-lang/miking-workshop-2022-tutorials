@@ -213,9 +213,6 @@ match argv with [prog] ++ args then
     -- folder, displaying the solution trace, on success.
 
     let method = RK4 {} in
-    -- Uncomment the line below if you want to use the external sundials CVODE
-    -- solver.
-    -- let method = BDF {} in
     switch ivpSolve eqn interval initialValues method
       case Right sol then odeWriteSolution outfile sol
       case Left msg then printErrorLn msg; exit 1

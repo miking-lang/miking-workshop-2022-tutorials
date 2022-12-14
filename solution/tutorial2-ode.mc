@@ -287,7 +287,8 @@ match argv with [prog] ++ args then
     -- Here we pass `eqn` and `initialValues` to the IVP solver backend and the
     -- resulting solution trace is then printed to an html file in the same
     -- folder, displaying the solution trace, on success.
-    switch ivpSolve eqn interval initialValues
+    let method = RK4 {} in
+    switch ivpSolve eqn interval initialValues method
       case Right sol then odeWriteSolution outfile sol
       case Left msg then printErrorLn msg; exit 1
     end
