@@ -46,31 +46,6 @@ include "map.mc"
 -- `fact n` computes the factorial !n, where we assume n >= 0.
 let fact : Int -> Int = lam n : Int. never -- You should replace `never` with your implementation.
 
--- START LIVE CODING SOLUTION
--- We first ensure that our unit tests fails on an incorrect output.
-let fact : Int -> Int = lam n : Int. 0
-
--- We then handle the base case n=0
-let fact : Int -> Int = lam n : Int.
-  if eqi n 0 then 1
-  else 0
-
--- We can also assert n >= 0
-let fact : Int -> Int = lam n : Int.
-  if lti n 0 then error "Undefined"
-  else if eqi n 0 then 1
-  else 0
-
--- For all other n we call `fact` recursivly with the predecessor of n.
-recursive let fact : Int -> Int = lam n : Int.
-  if lti n 0 then error "Undefined"
-  else if eqi n 0 then 1
-  else muli n (fact (subi n 1))
-end    -- This `end` keyword marks the end of mutually recursive top-level lets.
-
--- All unit tests should now pass.
--- END LIVE CODING SOLUTION
-
 -- Some tests for `fact`, add to these if you like. Uncomment these to add these
 -- tests to the executable.
 utest fact 0 with 1
@@ -132,22 +107,6 @@ let pow : Float -> Int -> Float = never
 -- A binary tree can either be a leaf or a node. Here `a` is a type variable.
 type Tree a
 
--- START LIVE CODING SOLUTION
--- We can think of a constructor as a function without a definition that takes
--- exacly one argument. We define constructors with the `con` keyword.
-
--- Our tree is polymorphic so we will also have to declare a type quantifier
--- using the `all` keyword.
-
--- Our leaves will not hold any data so we give their argument the
--- type of an empty record `{}` (or equivalently an empty tuple `()`).
-con Leaf : all a. {} -> Tree a
-
--- Our nodes will contain a left and right tree in addition to a key-value pair.
--- We can conveniently encode this data with records and tuples.
-con Node : all a. { left : Tree a, right : Tree a, data : (Int, a) } -> Tree a
--- END LIVE CODING SOLUTION
-
 
 /-
   Task D --------------------------------------------------------------------
@@ -158,11 +117,6 @@ con Node : all a. { left : Tree a, right : Tree a, data : (Int, a) } -> Tree a
 
 -- Constructs an empty tree.
 let treeEmpty : all a. Tree a = never
-
--- START LIVE CODING SOLUTION
--- An empty tree is here simply a leaf
-let treeEmpty : all a. Tree a = Leaf {}
--- END LIVE CODING SOLUTION
 
 
 /-
@@ -177,46 +131,6 @@ let treeEmpty : all a. Tree a = Leaf {}
 -- `value`.
 let treeInsert : all a. Int -> a -> Tree a -> Tree a =
   lam key. lam val. lam tree. never
-
--- START LIVE CODING SOLUTION
--- We de-construct constructors with the `match e then e else e` expression. The
--- `never` keyword dictates a part in the code that we should never reach during
--- runtime in a well-typed program.
-let treeInsert : all a. Int -> a -> Tree a -> Tree a =
-  lam key. lam val. lam tree.
-    -- The wildcard pattern `_` matches anything but we ignore its content.
-    match tree with Leaf _ then never
-    else match tree with Node _ then never
-    else never
-
--- If `tree` is a leaf we have found a place where we can insert a new node.
-let treeInsert : all a. Int -> a -> Tree a -> Tree a =
-  lam key. lam val. lam tree.
-    match tree with Leaf _ then
-      Node { left = Leaf {}, right = Leaf {}, val = (key, val) }
-    else match tree with Node _ then never
-    else never
-
--- If `tree` is a node we either update its value or traverse down its left or
--- right sub-tree.
-recursive let treeInsert : all a. Int -> a -> Tree a -> Tree a =
-  lam key. lam val. lam tree.
-    match tree with Leaf _ then
-      Node { left = Leaf {}, right = Leaf {}, data = (key, val) }
-    -- We use an and pattern `&` to both bind the record of this node to a
-    -- variable `r` and to match on its key.
-    else match tree with Node (r & { data = (nodeKey, _) }) then
-      if eqi key nodeKey then
-        -- We update records with the `with` keyword (note that this is not a
-        -- side-effect).
-        Node { r with data = (key, val) }
-      else if lti key nodeKey then
-        Node { r with left = treeInsert key val r.left }
-      else
-        Node { r with right = treeInsert key val r.right }
-    else never
-end
--- END LIVE CODING SOLUTION
 
 
 /-

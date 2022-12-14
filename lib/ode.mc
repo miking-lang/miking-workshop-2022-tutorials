@@ -158,97 +158,97 @@ lang ODEHelpersImpl
     Either String [Map String Float]
   sem ivpSolve eqs interval initialValues =
   | RK4 _ -> ivpSolveRK4 eqs interval initialValues
-  | BDF _ -> ivpSolveCVODE eqs interval initialValues
+  -- | BDF _ -> ivpSolveCVODE eqs interval initialValues
 
-  sem ivpSolveCVODE
-  : EquationsImpl ->
-    Float ->
-    Map String Float ->
-    Either String [Map String Float]
-  sem ivpSolveCVODE eqs interval =
-  | initialState ->
-    match unzip (mapBindings eqs) with (vars, rhs) in
-    let rhs = _wrapRHS vars rhs in
-    let n = length vars in
-    let y = tensorCreateCArrayFloat [n] (lam. 0.) in
-    iteri
-      (lam i. lam var.
-        let v = optionGetOrElse
-          (lam.
-            printErrorLn
-              (warnMsg
-                (join ["Unspecified initial value, setting ", var, "=0. (Don't worry about this until Task C)"]));
-            0.)
-          (mapLookup var initialState)
-        in
-        tensorLinearSetExn y i v)
-      vars;
-    let initialStateVars = mapKeys initialState in
-    iter
-      (lam var.
-        if mapMem var eqs then ()
-        else
-          printErrorLn
-            (warnMsg
-              (join ["Initial state ", var, " does not appear in model"])))
-      initialStateVars;
-    let v = nvectorSerialWrap y in
-    let m = sundialsMatrixDense n in
-    let lsolver = cvodeDlsSolver (cvodeDlsDense v m) in
-    let t0 = 0. in
-    let tend = interval in
-    let dt = 0.1 in
-    let s = cvodeInit {
-      lmm      = cvodeLMMBDF,
-      tol      = cvodeDefaultTolerances,
-      lsolver  = lsolver,
-      rhs      = lam. rhs,
-      t0       = t0,
-      y0       = v
-    } in
-    cvodeSetStopTime s interval;
-    recursive let recur = lam sol. lam t.
-      let step = mapFromSeq cmpString
-        (mapi (lam i. lam var. (var, tensorLinearGetExn y i)) vars)
-      in
-      let sol = snoc sol step in
-      switch cvodeSolveNormal { s = s, tend = addf t dt, y = v }
-        case (tend, CVODESuccess _) then
-          recur sol tend
-        case (_, CVODEStopTimeReached _) then
-          Right sol
-        case (_, CVODERootsFound _) then
-          Left (errMsg "Impossible, we should not find any roots")
-        case (_, CVODEError err) then
-          switch err
-            case
-              CVODEIllInput _ |
-              CVODELinearInitFailure _ |
-              CVODELinearSetupFailure _
-            then
-              Left (errMsg "Solver failed to initialize")
-            case
-              CVODETooClose _ |
-              CVODETooMuchWork _ |
-              CVODETooMuchAccuracy _ |
-              CVODEErrFailure _ |
-              CVODEConvergenceFailure _ |
-              CVODELinearSolveFailure _
-            then
-              Left (errMsg "Solver failed to converge to a solution")
-            case
-              CVODELinearSolveFailure _ |
-              CVODERhsFuncFailure _ |
-              CVODEFirstRhsFuncFailure _ |
-              CVODERepeatedRhsFuncFailure _ |
-              CVODEUnrecoverableRhsFuncFailure _
-            then
-              Left (errMsg "Solver failed to evaluate equations")
-            case _ then
-              Left (errMsg "Unspecified solver error")
-          end
-      end
-    in recur [] t0
+  -- sem ivpSolveCVODE
+  -- : EquationsImpl ->
+  --   Float ->
+  --   Map String Float ->
+  --   Either String [Map String Float]
+  -- sem ivpSolveCVODE eqs interval =
+  -- | initialState ->
+  --   match unzip (mapBindings eqs) with (vars, rhs) in
+  --   let rhs = _wrapRHS vars rhs in
+  --   let n = length vars in
+  --   let y = tensorCreateCArrayFloat [n] (lam. 0.) in
+  --   iteri
+  --     (lam i. lam var.
+  --       let v = optionGetOrElse
+  --         (lam.
+  --           printErrorLn
+  --             (warnMsg
+  --               (join ["Unspecified initial value, setting ", var, "=0. (Don't worry about this until Task C)"]));
+  --           0.)
+  --         (mapLookup var initialState)
+  --       in
+  --       tensorLinearSetExn y i v)
+  --     vars;
+  --   let initialStateVars = mapKeys initialState in
+  --   iter
+  --     (lam var.
+  --       if mapMem var eqs then ()
+  --       else
+  --         printErrorLn
+  --           (warnMsg
+  --             (join ["Initial state ", var, " does not appear in model"])))
+  --     initialStateVars;
+  --   let v = nvectorSerialWrap y in
+  --   let m = sundialsMatrixDense n in
+  --   let lsolver = cvodeDlsSolver (cvodeDlsDense v m) in
+  --   let t0 = 0. in
+  --   let tend = interval in
+  --   let dt = 0.1 in
+  --   let s = cvodeInit {
+  --     lmm      = cvodeLMMBDF,
+  --     tol      = cvodeDefaultTolerances,
+  --     lsolver  = lsolver,
+  --     rhs      = lam. rhs,
+  --     t0       = t0,
+  --     y0       = v
+  --   } in
+  --   cvodeSetStopTime s interval;
+  --   recursive let recur = lam sol. lam t.
+  --     let step = mapFromSeq cmpString
+  --       (mapi (lam i. lam var. (var, tensorLinearGetExn y i)) vars)
+  --     in
+  --     let sol = snoc sol step in
+  --     switch cvodeSolveNormal { s = s, tend = addf t dt, y = v }
+  --       case (tend, CVODESuccess _) then
+  --         recur sol tend
+  --       case (_, CVODEStopTimeReached _) then
+  --         Right sol
+  --       case (_, CVODERootsFound _) then
+  --         Left (errMsg "Impossible, we should not find any roots")
+  --       case (_, CVODEError err) then
+  --         switch err
+  --           case
+  --             CVODEIllInput _ |
+  --             CVODELinearInitFailure _ |
+  --             CVODELinearSetupFailure _
+  --           then
+  --             Left (errMsg "Solver failed to initialize")
+  --           case
+  --             CVODETooClose _ |
+  --             CVODETooMuchWork _ |
+  --             CVODETooMuchAccuracy _ |
+  --             CVODEErrFailure _ |
+  --             CVODEConvergenceFailure _ |
+  --             CVODELinearSolveFailure _
+  --           then
+  --             Left (errMsg "Solver failed to converge to a solution")
+  --           case
+  --             CVODELinearSolveFailure _ |
+  --             CVODERhsFuncFailure _ |
+  --             CVODEFirstRhsFuncFailure _ |
+  --             CVODERepeatedRhsFuncFailure _ |
+  --             CVODEUnrecoverableRhsFuncFailure _
+  --           then
+  --             Left (errMsg "Solver failed to evaluate equations")
+  --           case _ then
+  --             Left (errMsg "Unspecified solver error")
+  --         end
+  --     end
+  --   in recur [] t0
 
   sem ivpSolveRK4
   : EquationsImpl ->
@@ -379,85 +379,85 @@ let odeUsage = strJoin "\n" [
 
 mexpr
 
-use TestODEHelpersImpl in
+-- use TestODEHelpersImpl in
 
-let eq = eitherEq
-  (lam x. lam y.
-    and
-      (eqf x.interval y.interval)
-      (eqSeq
-        (lam a. lam b. and (eqString a.0 b.0) (eqf a.1 b.1))
-        (mapToSeq x.initialValues) y.initialValues))
-  eqString
-in
+-- let eq = eitherEq
+--   (lam x. lam y.
+--     and
+--       (eqf x.interval y.interval)
+--       (eqSeq
+--         (lam a. lam b. and (eqString a.0 b.0) (eqf a.1 b.1))
+--         (mapToSeq x.initialValues) y.initialValues))
+--   eqString
+-- in
 
-utest odeReadSolverConfig ["10", "x =1.", "y = 2.2", "z=03"]
-with Right { interval = 10., initialValues = [("x", 1.), ("y", 2.2), ("z", 3.)]}
-using eq in
+-- utest odeReadSolverConfig ["10", "x =1.", "y = 2.2", "z=03"]
+-- with Right { interval = 10., initialValues = [("x", 1.), ("y", 2.2), ("z", 3.)]}
+-- using eq in
 
-utest odeReadSolverConfig ["10.1", "x =1.", "y = 2.2", "z=03"]
-with Right { interval = 10.1, initialValues = [("x", 1.), ("y", 2.2), ("z", 3.)]}
-using eq in
+-- utest odeReadSolverConfig ["10.1", "x =1.", "y = 2.2", "z=03"]
+-- with Right { interval = 10.1, initialValues = [("x", 1.), ("y", 2.2), ("z", 3.)]}
+-- using eq in
 
-utest odeReadSolverConfig ["10."]
-with Right { interval = 10., initialValues = []}
-using eq in
+-- utest odeReadSolverConfig ["10."]
+-- with Right { interval = 10., initialValues = []}
+-- using eq in
 
-utest odeReadSolverConfig []
-with Left "Error: Found no interval"
-using eq in
+-- utest odeReadSolverConfig []
+-- with Left "Error: Found no interval"
+-- using eq in
 
-utest odeReadSolverConfig ["10A", "x =1.", "y = 2.2", "z=03"]
-with Left "Error: Parsing \"10A\" as float"
-using eq in
+-- utest odeReadSolverConfig ["10A", "x =1.", "y = 2.2", "z=03"]
+-- with Left "Error: Parsing \"10A\" as float"
+-- using eq in
 
-utest odeReadSolverConfig ["10", "x =", "y = 2.2", "z=03"]
-with Left "Error: Parsing \"\" as float"
-using eq in
+-- utest odeReadSolverConfig ["10", "x =", "y = 2.2", "z=03"]
+-- with Left "Error: Parsing \"\" as float"
+-- using eq in
 
-utest odeReadSolverConfig ["10", "x", "y = 2.2", "z=03"]
-with Left "Error: Parsing \"x\" as initial value"
-using eq in
+-- utest odeReadSolverConfig ["10", "x", "y = 2.2", "z=03"]
+-- with Left "Error: Parsing \"x\" as initial value"
+-- using eq in
 
-let step = mapFromSeq cmpString [("x", 1.), ("y", 2.2), ("z", 3.)] in
-utest solutionHeaderString (mapKeys step) with "x,y,z" in
+-- let step = mapFromSeq cmpString [("x", 1.), ("y", 2.2), ("z", 3.)] in
+-- utest solutionHeaderString (mapKeys step) with "x,y,z" in
 
-utest solutionStepToString (mapKeys step) step  with "1.,2.2,3." in
+-- utest solutionStepToString (mapKeys step) step  with "1.,2.2,3." in
 
--- TESTS SOLUTION PRINTER
-let sol = [
-  mapFromSeq cmpString [("x", 1.), ("y", 2.2), ("z", 3.)],
-  mapFromSeq cmpString [("x", 2.), ("y", 3.2), ("z", 4.)]
-] in
+-- -- TESTS SOLUTION PRINTER
+-- let sol = [
+--   mapFromSeq cmpString [("x", 1.), ("y", 2.2), ("z", 3.)],
+--   mapFromSeq cmpString [("x", 2.), ("y", 3.2), ("z", 4.)]
+-- ] in
 
--- odeWriteSolution sol;
--- odeWriteSolution [];
+-- -- odeWriteSolution sol;
+-- -- odeWriteSolution [];
 
--- TEST SOLVER BACKEND
-let harmonicOscillator =
-  mapFromSeq cmpString [
-    ("x"
-    ,lam states : Map String Expr.
-      let dx = exprToFloat (mapFindExn "dx" states) in
-      NumExpr dx),
-    ("dx"
-    ,lam states : Map String Expr.
-      let dx = exprToFloat (mapFindExn "dx" states) in
-      let x = exprToFloat (mapFindExn "x" states) in
-      NumExpr (negf (addf dx x)))
-  ]
-in
+-- -- TEST SOLVER BACKEND
+-- let harmonicOscillator =
+--   mapFromSeq cmpString [
+--     ("x"
+--     ,lam states : Map String Expr.
+--       let dx = exprToFloat (mapFindExn "dx" states) in
+--       NumExpr dx),
+--     ("dx"
+--     ,lam states : Map String Expr.
+--       let dx = exprToFloat (mapFindExn "dx" states) in
+--       let x = exprToFloat (mapFindExn "x" states) in
+--       NumExpr (negf (addf dx x)))
+--   ]
+-- in
 
-let initialState = mapFromSeq cmpString [("x", 1.), ("dx", 0.)] in
-utest
-  match ivpSolveCVODE harmonicOscillator 10. initialState with Right _ then true
-  else false
-with true in
+-- let initialState = mapFromSeq cmpString [("x", 1.), ("dx", 0.)] in
+-- utest
+--   match ivpSolveCVODE harmonicOscillator 10. initialState with Right _ then true
+--   else false
+-- with true in
 
--- -- Solves and prints solution
--- (switch ivpSolveCVODE harmonicOscillator 10. initialState
---   case Right sol then odeWriteSolution filename sol
---   case Left msg then printLn msg
--- end);
+-- -- -- Solves and prints solution
+-- -- (switch ivpSolveCVODE harmonicOscillator 10. initialState
+-- --   case Right sol then odeWriteSolution filename sol
+-- --   case Left msg then printLn msg
+-- -- end);
 
 ()
